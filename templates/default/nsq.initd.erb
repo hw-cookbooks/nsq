@@ -1,0 +1,141 @@
+#!/bin/bash -
+<% if %w(redhat centos amazon fedora).include?(node.platform) -%>
+#
+# <%= @app %>
+#
+# chkconfig:   - 57 47
+# description: NSQ Process
+# processname: <%= @name %>
+<% else -%>
+### BEGIN INIT INFO
+# Provides:          <%= @name %>
+# Required-Start:    $local_fs $remote_fs $network
+# Required-Stop:     $local_fs $remote_fs $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: <%= @app %> process!
+# Description:       <%= @app %> process (<%= @name %>)
+### END INIT INFO
+<% end -%>
+
+NSQ_APP='<%= @app %>'
+NSQ_NAME='<%= @name %>'
+NSQ_CMD='<%= @cmd %>'
+NSQ_PID='<%= @pid_file %>'
+NSQ_USER='<%= @user %>'
+NSQ_LOG='<%= @log %>'
+
+
+PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+export PATH
+IFS=$' \t\n'
+export IFS
+
+NSQ_BIN="$(which <%= @app %>)"
+
+[ -r /etc/init.d/functions ] && . /etc/init.d/functions
+[ -r /lib/lsb/init-functions ] && . /lib/lsb/init-functions
+[ -r "/etc/default/${NSQ_NAME}" ] && . "/etc/default/${NSQ_NAME}"
+
+do_start() {
+    test -f "${NSQ_BIN}" || exit 0
+    if is_up
+    then
+        echo $'<%= @app %> [<%= @name %>] already started.'
+        return 0
+    fi
+    echo -n $"NSQ ${NSQ_APP} daemon: ${NSQ_NAME}... "
+    su - "${NSQ_USER}" -s '/bin/sh' -c "${NSQ_CMD} >> ${NSQ_LOG} 2>&1 & echo \$! > ${NSQ_PID}"
+    echo 'started'
+}
+
+do_stop() {
+    test -f "${NSQ_BIN}" || exit 0
+    if ! is_up
+    then
+        echo $"NSQ ${NSQ_APP} daemon ${NSQ_NAME} already stopped."
+        return 0
+    fi
+    echo -n $"NSQ ${NSQ_APP} daemon: ${NSQ_NAME}... "
+    do_kill
+    local I='0'
+    while is_up
+    do
+        echo -n '.'
+        if [ "${I}" -gt 10 ]
+        then
+            do_kill_force
+            I='0'
+        else
+            do_kill
+        fi
+        sleep 1
+        I="$((I+1))"
+    done
+    echo 'stopped'
+}
+
+nsq_pid() {
+    tail -1 "${NSQ_PID}" 2> /dev/null
+}
+
+is_up() {
+    PID="$(nsq_pid)"
+    [ x"${PID}" != x ] && ps -p "${PID}" -o comm,args h 2> /dev/null | grep -qFw "${NSQ_NAME}"
+}
+
+do_kill() {
+    PID="$(nsq_pid)"
+    [ x"${PID}" != x ] && su - "${NSQ_USER}" -c "kill -TERM ${PID}"
+}
+
+do_kill_force() {
+    PID="$(nsq_pid)"
+    echo -n 'force'
+    [ x"${PID}" != x ] && su - "${NSQ_USER}" -c "kill -KILL ${PID}"
+}
+
+do_restart() {
+    test -f "${NSQ_BIN}" || exit 0
+    do_stop
+    sleep 1
+    do_start
+}
+
+do_status() {
+    test -f "${NSQ_BIN}" || exit 0
+    if is_up
+    then
+        echo "${NSQ_NAME} is running."
+        exit 0
+    else
+        echo "${NSQ_NAME} is not running."
+        exit 1
+    fi
+}
+
+do_usage() {
+    echo $"Usage: $0 {start | stop | restart | force-reload | status}"
+    exit 1
+}
+
+case "$1" in
+start)
+    do_start
+    exit "$?"
+    ;;
+stop)
+    do_stop
+    exit "$?"
+    ;;
+restart|force-reload)
+    do_restart
+    exit "$?"
+    ;;
+status)
+    do_status
+    ;;
+*)
+    do_usage
+    ;;
+esac
