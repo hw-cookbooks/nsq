@@ -1,5 +1,7 @@
 use_inline_resources if respond_to?(:use_inline_resources)
 
+NSQ_CONFIG_FILE_SUPPORT = %w(nsqadmin nsqd nsqlookupd)
+
 def load_current_resource
 
   @config_dir = ::File.join(
@@ -19,6 +21,14 @@ def load_current_resource
   end
 
   new_resource.config Mash.new(new_resource.config)
+
+  if(new_resource.use_config_file.nil?)
+    new_resource.use_config_file(
+      NSQ_CONFIG_FILE_SUPPORT.include?(
+        new_resource.app.to_s
+      )
+    )
+  end
 
 end
 
@@ -49,6 +59,16 @@ action :add do
     if(node[:nsq][:enabled].include?(service_name))
       notifies :restart, "service[#{service_name}]"
     end
+    only_if{ new_resource.use_config_file }
+  end
+
+  if(new_resource.use_config_file)
+    options = "-config #{config}"
+  else
+    options = new_resource.config.map do |k,v|
+      k = k.to_s.tr('_', '-')
+      ["-#{k}", v.inspect].join('=')
+    end.join(' ')
   end
 
   service_provider = Chef::Provider::Service::Simple
@@ -57,7 +77,7 @@ action :add do
 
   command = ::File.join(
     node[:nsq][:install][:bindir], new_resource.app
-  ) << " -config #{config}"
+  ) << " #{options}"
 
   log_file = ::File.join(
     node[:nsq][:setup][:directory][:log],

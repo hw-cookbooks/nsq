@@ -8,4 +8,5 @@ attribute :app, :equal_to => NSQ_APPS, :required => true
 attribute :run_as, :kind_of => String
 attribute :create_user, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :config, :kind_of => Hash, :required => true
+attribute :use_config_file, :kind_of => [TrueClass, FalseClass]
 attribute :init, :equal_to => NSQ_INITS, :default => 'runit'
