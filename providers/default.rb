@@ -98,6 +98,7 @@ action :add do
       setup_block = lambda do
         runit_service service_name do
           default_logger true
+          cookbook 'nsq'
           run_template_name 'nsq'
           restart_on_update false
           action :enable
