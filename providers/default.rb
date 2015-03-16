@@ -47,7 +47,7 @@ action :add do
     recursive true
   end
 
-  directory new_resource.config[:data_path] do
+  directory new_resource.config.fetch(:data_path, 'nsq<unset>') do
     recursive true
     owner new_resource.run_as
     only_if{ new_resource.config[:data_path] }
