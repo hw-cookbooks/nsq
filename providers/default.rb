@@ -178,6 +178,9 @@ action :add do
     end
   end
 
+  unless(node[:nsq][:enabled].include?(service_name))
+    node.set[:nsq][:enabled].push(service_name)
+  end
 end
 
 action :remove do
