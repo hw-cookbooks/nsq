@@ -101,10 +101,10 @@ action :add do
           run_template_name 'nsq'
           restart_on_update false
           action :enable
-          options Mash.new(
+          options({
             :cmd => command,
             :user => new_resource.run_as
-          )
+          })
         end
       end
       service_provider = Chef::Provider::Service::Init
