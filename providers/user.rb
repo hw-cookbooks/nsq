@@ -1,8 +1,8 @@
-use_inline_resources if respond_to?(:use_inline_resources)
+
 
 action :add do
   homedir = ::File.join(
-    node[:nsq][:setup][:user][:base_directory],
+    node['nsq']['setup']['user']['base_directory'],
     new_resource.name
   )
 
@@ -18,9 +18,7 @@ action :add do
 end
 
 action :remove do
-
   user new_resource.name do
     action :remove
   end
-
 end
